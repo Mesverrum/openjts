@@ -5,7 +5,8 @@ Juniper gNMI telemetry into Grafana Cloud, using the profiles and dashboards fro
 
 Upstream OpenJTS runs a full local stack: a custom Telegraf build, jtso (the orchestrator),
 InfluxDB, Kapacitor, Chronograf and Grafana. This fork keeps the part that took real Junos
-knowledge to build, the per-family telemetry profiles and the 15 dashboards, and swaps
+knowledge to build, the per-family telemetry profiles and the 15 dashboards (plus a cost and
+cardinality dashboard of its own), and swaps
 everything else for stock components that ship to Grafana Cloud:
 
 ```
@@ -93,7 +94,7 @@ Families: `mx`, `ptx`, `acx`, `qfx`, `ex`, `crpd`, `vmx`, `vjunos`, `vevo`.
 | `scripts/generate.py` | Renders the Telegraf config from `targets/routers.yaml` and the profiles. |
 | `scripts/finalize.star` | Last Telegraf processor. Turns Influx-shaped fields into Prometheus series. |
 | `alloy/config.alloy` | OTLP in, batch, OTLP/HTTP out to Grafana Cloud. |
-| `dashboards/` | The 15 upstream dashboards, converted to PromQL. Generated, committed. |
+| `dashboards/` | The 15 upstream dashboards, converted to PromQL, plus `openjts-cost.json` (active series by source, DPM). Generated, committed. |
 | `alerts/openjts.json` | Grafana alert rules from the profiles' probes. Generated, committed. |
 | `docs/` | Architecture, migration notes, metrics catalog, caveats. |
 | `tests/` | Processor chain in real Telegraf, PromQL checks with promtool, OTLP end to end. |
@@ -103,7 +104,7 @@ Families: `mx`, `ptx`, `acx`, `qfx`, `ex`, `crpd`, `vmx`, `vjunos`, `vevo`.
 ```
 make up | down | restart | logs | status
 make content           regenerate dashboards/, alerts/, docs/metrics.md from design_profile/
-make test              processor chain + every PromQL expression (needs Docker)
+make test              processor chain, 1 DPM floor, every PromQL expression (needs Docker)
 make e2e               Telegraf -> Alloy -> Prometheus OTLP receiver, check names
 make check             content is in sync with design_profile/ (what CI runs)
 make push              push dashboards and alerts to GRAFANA_URL
@@ -117,6 +118,7 @@ WSL, set `OPENJTS_DOCKER=wsl`.
 - [Architecture](docs/architecture.md): the pipeline, naming rules, labels.
 - [Coming from OpenJTS](docs/migration.md): what changed, what was dropped and why.
 - [Metrics catalog](docs/metrics.md): every series the profiles can produce.
+- [Cost](docs/cost.md): how Grafana Cloud bills the series, the 1 DPM floor, the cost dashboard.
 - [Dashboard conversion](docs/dashboards.md): how InfluxQL became PromQL, and the panels that were rewritten by hand.
 - [Juniper caveats](docs/juniper-caveats.md): what has not been checked on a router.
 

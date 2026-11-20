@@ -8,6 +8,14 @@
 # Shows up as service.instance.id on every series. Use one name per collector host.
 collector: openjts-1
 
+# Seconds between data points for every series, one value for the whole collector.
+# Grafana Cloud includes 1 data point per series per minute, and bills on whichever is higher,
+# active series or total DPM / included DPM (docs/cost.md). Several profiles ask the router for
+# 30s (traffic, optics, TWAMP, SR-MPLS); this raises them to the floor. It also sets the
+# heartbeat on on_change paths (BGP session state) and the collector's own health metrics.
+# Go lower only for a short investigation, then put it back. Allowed 1 to 300.
+min_sample_interval: 60
+
 defaults:
   port: 9339               # Junos gNMI port (set system services extension-service request-response grpc)
   encoding: proto

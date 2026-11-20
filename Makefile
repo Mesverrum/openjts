@@ -1,7 +1,7 @@
 PY      ?= python3
 COMPOSE ?= docker compose -f compose.yaml -f generated/compose.credentials.yaml
 
-.PHONY: help generate up down restart logs status dashboards alerts catalog content test test-pipeline test-dashboards e2e check push-dashboards push-alerts push
+.PHONY: help generate up down restart logs status dashboards alerts catalog content test test-pipeline test-cost test-dashboards e2e check push-dashboards push-alerts push
 
 help:
 	@echo "Collector"
@@ -12,7 +12,7 @@ help:
 	@echo "  content           dashboards/, alerts/ and docs/metrics.md from design_profile/"
 	@echo "  push              push dashboards and alert rules (GRAFANA_URL / GRAFANA_TOKEN in .env)"
 	@echo "Checks"
-	@echo "  test              processor chain in Telegraf + PromQL parse/name checks"
+	@echo "  test              processor chain in Telegraf, 1 DPM floor, PromQL parse/name checks"
 	@echo "  e2e               Telegraf -> Alloy -> Prometheus OTLP receiver, check series names"
 	@echo "  check             content is up to date with design_profile/ (CI)"
 
@@ -36,6 +36,7 @@ status:
 
 dashboards:
 	$(PY) scripts/convert_dashboards.py
+	$(PY) scripts/build_cost_dashboard.py
 
 alerts:
 	$(PY) scripts/build_alerts.py
@@ -45,10 +46,13 @@ catalog:
 
 content: dashboards alerts catalog
 
-test: test-pipeline test-dashboards
+test: test-pipeline test-cost test-dashboards
 
 test-pipeline:
 	$(PY) tests/test_pipeline.py
+
+test-cost:
+	$(PY) tests/test_cost.py
 
 test-dashboards:
 	$(PY) tests/test_dashboards.py

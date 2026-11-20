@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
+import urllib.parse
 import uuid
 from pathlib import Path
 
@@ -32,6 +34,14 @@ EXPECT = {
     "junos_ddos_stats_dropped_aggregate_policer_total",
     "junos_firewall_drop_pkts_total",
 }
+
+
+# alloy/config.alloy keeps only these Alloy self-metrics (names as they land in Prometheus).
+# The self exporter has 130+ families; anything else reaching the stack is a billed series.
+ALLOY_EXPECT = {"otelcol_exporter_sent_metric_points_total"}
+ALLOY_ALLOWED = re.compile(
+    r"target_info|up|alloy_build_info|otelcol_exporter_(sent|send_failed|enqueue_failed)_metric_points_total"
+    r"|otelcol_receiver_(accepted|refused)_metric_points_total|otelcol_exporter_queue_(size|capacity)")
 
 
 def docker(*args: str, check: bool = True) -> subprocess.CompletedProcess:
@@ -77,15 +87,59 @@ def main() -> int:
             return 1
 
         names: set[str] = set()
-        for _ in range(12):
+        # Alloy scrapes itself every 60s, so wait for that first scrape too.
+        for _ in range(30):
             time.sleep(5)
             names = set(prom_get(prom, "/api/v1/label/__name__/values")["data"])
-            if EXPECT <= names:
+            if EXPECT <= names and ALLOY_EXPECT <= names:
                 break
         junos = sorted(n for n in names if n.startswith("junos_"))
         print("metric names in Prometheus:")
         for n in junos:
             print("  " + n)
+        # The Prometheus under test scrapes itself too, so pick Alloy's series by job, not by name.
+        # prometheus.exporter.self targets carry job="integrations/self", which wins over job_name.
+        match = urllib.parse.quote('{job="integrations/self"}')
+        alloy_series = prom_get(prom, f"/api/v1/series?match[]={match}")["data"]
+        alloy_names = sorted({s["__name__"] for s in alloy_series})
+        print(f"Alloy self-metrics after the allowlist ({len(alloy_series)} series):")
+        for n in alloy_names:
+            print("  " + n)
+        extra = sorted(n for n in alloy_names if not ALLOY_ALLOWED.fullmatch(n))
+        if extra:
+            print("FAIL Alloy self-metrics outside the allowlist:", extra)
+            return 1
+        if not ALLOY_EXPECT <= set(alloy_names):
+            print("FAIL missing Alloy self-metrics:", sorted(ALLOY_EXPECT - set(alloy_names)))
+            return 1
+        internal = sorted(n for n in names if n.startswith("openjts_internal_"))
+        print("collector health metrics:")
+        for n in internal:
+            print("  " + n)
+        if not internal:
+            print("FAIL no openjts_internal_* metrics from inputs.internal")
+            return 1
+        # Every query on the cost dashboard that reads this stack's metrics datasource has to run, and the
+        # ones that are not rates have to return something (a rate needs two scrapes, this run has one).
+        cost = json.loads((REPO / "dashboards" / "openjts-cost.json").read_text(encoding="utf-8"))
+        bad = []
+        for p in cost["panels"]:
+            for t in p.get("targets") or []:
+                if t["datasource"]["uid"] != "${datasource}":
+                    continue
+                try:
+                    res = prom_get(prom, "/api/v1/query?query=" + urllib.parse.quote(t["expr"]))["data"]["result"]
+                except Exception as e:  # noqa: BLE001
+                    bad.append(f"{p['title']}: {e}")
+                    continue
+                if not res and "rate(" not in t["expr"]:
+                    bad.append(f"{p['title']}: no data for {t['expr']}")
+        if bad:
+            print("FAIL cost dashboard queries:")
+            for b in bad:
+                print("  " + b)
+            return 1
+        print("cost dashboard queries OK")
         sample = prom_get(prom, "/api/v1/query?query=junos_interfaces_in_octets_total")["data"]["result"]
         if sample:
             print("labels on junos_interfaces_in_octets_total:", json.dumps(sample[0]["metric"], sort_keys=True))

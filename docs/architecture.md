@@ -36,7 +36,10 @@ A `[[inputs.mock]]` per router emits `junos_device_info` with `family`, `version
 `site` and `profiles` labels from the targets file. This replaces jtso's enrichment tags.
 Dashboards join on it instead of carrying those tags on every series.
 
-`[[inputs.internal]]` reports Telegraf's own health as `openjts_*`.
+`[[inputs.internal]]` reports Telegraf's own health as `openjts_internal_*`, cut to the agent and
+output counters. Every sample interval, the heartbeat on `on_change` paths and the mock and
+internal inputs run at `min_sample_interval` (60s default) so no series costs more than 1 DPM.
+See [cost.md](cost.md).
 
 ## finalize.star
 
@@ -62,8 +65,9 @@ what the dashboards use.
 ## Alloy
 
 `alloy/config.alloy`: OTLP receiver, memory limiter, batch, OTLP/HTTP exporter with basic
-auth from `GC_OTLP_*`. Alloy also ships its own metrics as `job="openjts-alloy"`. The UI is
-on `http://localhost:12345`.
+auth from `GC_OTLP_*`. Alloy also ships its own health as `job="integrations/self"`, filtered to
+nine metric names (the exporter has 130+ families, each a billed series). The UI is on
+`http://localhost:12345`.
 
 Alloy is there so the Grafana Cloud credentials, batching and retries live in one place,
 and so other signals (syslog, SNMP) can be added later without touching Telegraf.

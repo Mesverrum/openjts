@@ -50,14 +50,26 @@ otelcol.auth.basic "grafana_cloud" {
   password = sys.env("GC_OTLP_KEY")
 }
 
-// Alloy's own health (alloy_*, otelcol_* exporter/receiver counters).
+// Alloy's own health. The self exporter has 130+ metric families (go_*, process_*, loki_*, ...);
+// every one is a billed series. Keep only what answers "is it sending, and how much":
+// the exporter and receiver point counters (these also feed the DPM panels), the exporter
+// queue, build info, and up.
 prometheus.exporter.self "alloy" { }
 
 prometheus.scrape "alloy" {
   targets         = prometheus.exporter.self.alloy.targets
   scrape_interval = "60s"
-  job_name        = "openjts-alloy"
-  forward_to      = [otelcol.receiver.prometheus.alloy.receiver]
+  forward_to      = [prometheus.relabel.alloy_keep.receiver]
+}
+
+prometheus.relabel "alloy_keep" {
+  forward_to = [otelcol.receiver.prometheus.alloy.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "up|alloy_build_info|otelcol_exporter_(sent|send_failed|enqueue_failed)_metric_points_total|otelcol_receiver_(accepted|refused)_metric_points_total|otelcol_exporter_queue_(size|capacity)"
+    action        = "keep"
+  }
 }
 
 otelcol.receiver.prometheus "alloy" {

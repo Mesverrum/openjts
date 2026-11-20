@@ -4,7 +4,9 @@ This fork has been built and tested without a Junos router. What is verified and
 
 ## Verified
 
-- The rendered Telegraf config loads in stock Telegraf 1.36 for every profile and family.
+- The rendered Telegraf config loads in stock Telegraf 1.36 for every profile and family
+  (`telegraf config check` on `generate.py --all-profiles`, in `tests/test_cost.py`), with every
+  sample interval at or above `min_sample_interval`.
 - The processor chain, run in real Telegraf against line-protocol fixtures shaped like gNMI
   output (`tests/fixtures/pipeline.lp`), produces the expected series names, labels and types.
 - Telegraf → Alloy → an OTLP receiver produces the expected Prometheus names, including `_total`.
@@ -20,7 +22,12 @@ This fork has been built and tested without a Junos router. What is verified and
 - **Juniper header extension.** `_component_id` / `_subcomponent_id` depend on Telegraf's
   `juniper_header` decoding. Profiles that key on them (NPU, VOQ, some health panels) are the
   most likely to come up empty.
-- **`junos_device_info`** comes from `inputs.mock` and is not part of the end-to-end test.
+- **`heartbeat_interval` on a router.** Telegraf sends it on `on_change` paths. Whether a Junos
+  release honours it is untested; if not, BGP session state goes quiet and ages out ([cost.md](cost.md)).
+- **Sample rates a router actually delivers.** The config asks for the floor. The cost dashboard's
+  DPM panels show what arrives.
+- **`junos_device_info`** comes from `inputs.mock`. The end-to-end test runs one mock for `edge1`,
+  not the per-router set `generate.py` renders from your targets file.
 - **Throughput at scale.** Batch sizes are Telegraf and Alloy defaults tuned up, not measured.
 
 ## First router checklist
