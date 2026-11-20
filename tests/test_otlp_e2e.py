@@ -13,17 +13,16 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_pipeline import FIXTURE, REPO, docker_cmd, host_path  # noqa: E402
+from test_pipeline import FIXTURE, REPO, docker_cmd, host_path, scratch_dir  # noqa: E402
 
 TELEGRAF = os.environ.get("TELEGRAF_IMAGE", "telegraf:1.36")
 ALLOY = os.environ.get("ALLOY_IMAGE", "grafana/alloy:v1.17.1")
-PROM = os.environ.get("PROM_IMAGE", "prom/prometheus:latest")
+PROM = os.environ.get("PROM_IMAGE", "prom/prometheus:v3.5.0")
 
 EXPECT = {
     "junos_interfaces_in_octets_total",
@@ -49,7 +48,7 @@ def prom_get(container: str, path: str) -> dict:
 
 def main() -> int:
     tag = "openjts-e2e-" + uuid.uuid4().hex[:6]
-    work = Path(tempfile.mkdtemp(prefix="openjts-e2e-", dir=REPO / "tests"))
+    work = scratch_dir("openjts-test-e2e-")
     prom, alloy = f"{tag}-prom", f"{tag}-alloy"
     try:
         gen = subprocess.run([sys.executable, str(REPO / "scripts" / "generate.py"), "--test-input", str(FIXTURE),

@@ -15,7 +15,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -30,7 +29,7 @@ GRAFANA_VARS = {
 EXTRA_SERIES = {"junos_device_info"}
 
 sys.path.insert(0, str(REPO / "tests"))
-from test_pipeline import docker_cmd, host_path  # noqa: E402
+from test_pipeline import docker_cmd, host_path, scratch_dir  # noqa: E402
 
 
 def exported_series() -> set[str]:
@@ -90,7 +89,7 @@ def main() -> int:
             if name not in known and not expr.count(f'"{name}'):
                 failures.append(f"{where}: {name} is not exported")
 
-    tmp = Path(tempfile.mkdtemp(prefix="openjts-test-", dir=REPO / "tests"))
+    tmp = scratch_dir("openjts-test-")
     try:
         rules = {"groups": [{"name": "dashboards", "rules": [
             {"record": f"check:expr_{i}", "expr": substitute(e)} for i, (_, e) in enumerate(exprs)]}]}

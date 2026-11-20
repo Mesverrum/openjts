@@ -57,6 +57,13 @@ def docker_cmd() -> list[str]:
     return ["wsl", "-e", "docker"] if _wsl_docker() else ["docker"]
 
 
+def scratch_dir(prefix: str) -> Path:
+    """Gitignored work dir under tests/, readable by the non-root users in the images."""
+    d = Path(tempfile.mkdtemp(prefix=prefix, dir=REPO / "tests"))
+    d.chmod(0o755)
+    return d
+
+
 def host_path(p: Path) -> str:
     if not _wsl_docker():
         return str(p)
@@ -90,7 +97,7 @@ def parse_line(line: str) -> tuple[str, dict[str, str], dict[str, str]]:
 
 
 def main() -> int:
-    out = Path(tempfile.mkdtemp(prefix="openjts-test-", dir=REPO / "tests"))
+    out = scratch_dir("openjts-test-")
     try:
         gen = subprocess.run(
             [sys.executable, str(REPO / "scripts" / "generate.py"), "--test-input", str(FIXTURE), "--out", str(out)],
