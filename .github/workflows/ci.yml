@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Dashboards and alerts match design_profile/
+        run: make check
+      - name: Processor chain in Telegraf, PromQL parse and names
+        run: make test
+      - name: Telegraf -> Alloy -> OTLP naming
+        run: make e2e

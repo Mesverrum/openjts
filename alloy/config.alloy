@@ -1,0 +1,79 @@
+// Telegraf (OTLP gRPC :4317) -> batch -> Grafana Cloud OTLP gateway.
+// GC_OTLP_* come from .env and must belong to the same Grafana Cloud stack
+// (Connections -> OpenTelemetry). Alloy UI: http://localhost:12345
+
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+otelcol.receiver.otlp "telegraf" {
+  grpc {
+    endpoint          = "0.0.0.0:4317"
+    max_recv_msg_size = "64MiB"
+  }
+
+  output {
+    metrics = [otelcol.processor.memory_limiter.default.input]
+  }
+}
+
+otelcol.processor.memory_limiter "default" {
+  check_interval         = "1s"
+  limit_percentage       = 80
+  spike_limit_percentage = 20
+
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  send_batch_size     = 8192
+  send_batch_max_size = 16384
+  timeout             = "5s"
+
+  output {
+    metrics = [otelcol.exporter.otlphttp.grafana_cloud.input]
+  }
+}
+
+otelcol.exporter.otlphttp "grafana_cloud" {
+  client {
+    endpoint = sys.env("GC_OTLP_URL")
+    auth     = otelcol.auth.basic.grafana_cloud.handler
+  }
+}
+
+otelcol.auth.basic "grafana_cloud" {
+  username = sys.env("GC_OTLP_ACCOUNT")
+  password = sys.env("GC_OTLP_KEY")
+}
+
+// Alloy's own health. The self exporter has 130+ metric families (go_*, process_*, loki_*, ...);
+// every one is a billed series. Keep only what answers "is it sending, and how much":
+// the exporter and receiver point counters (these also feed the DPM panels), the exporter
+// queue, build info, and up.
+prometheus.exporter.self "alloy" { }
+
+prometheus.scrape "alloy" {
+  targets         = prometheus.exporter.self.alloy.targets
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.alloy_keep.receiver]
+}
+
+prometheus.relabel "alloy_keep" {
+  forward_to = [otelcol.receiver.prometheus.alloy.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "up|alloy_build_info|otelcol_exporter_(sent|send_failed|enqueue_failed)_metric_points_total|otelcol_receiver_(accepted|refused)_metric_points_total|otelcol_exporter_queue_(size|capacity)"
+    action        = "keep"
+  }
+}
+
+otelcol.receiver.prometheus "alloy" {
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+  }
+}
