@@ -19,7 +19,6 @@
   "annotations": {
     "list": []
   },
-  "links": [],
   "panels": [
     {
       "id": 1,
@@ -1482,5 +1481,14 @@
         "sort": 1
       }
     ]
-  }
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "Series per device",
+      "url": "/d/openjts-series-per-device",
+      "icon": "dashboard",
+      "targetBlank": false
+    }
+  ]
 }

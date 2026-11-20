@@ -61,6 +61,6 @@ These panels had no direct PromQL equivalent. The converter replaces them:
 rules, checks each `junos_*` name against what `finalize.star` can export, and runs them all
 through `promtool` for syntax.
 
-## Not converted: the cost dashboard
+## Not converted: the cost dashboards
 
-`openjts-cost.json` is new in this fork and is built by `scripts/build_cost_dashboard.py`, not converted from jtso. It follows the active series and DPM panels of the Grafana Cloud Billing/Usage dashboard. It has its own `usage` datasource variable for `grafanacloud-usage`. See [cost.md](cost.md).
+`openjts-cost.json` and `openjts-series-per-device.json` are new in this fork and are built by `scripts/build_cost_dashboard.py`, not converted from jtso. It follows the active series and DPM panels of the Grafana Cloud Billing/Usage dashboard. It has its own `usage` datasource variable for `grafanacloud-usage`. See [cost.md](cost.md).

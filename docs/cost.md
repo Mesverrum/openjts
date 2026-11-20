@@ -78,6 +78,24 @@ Every query in the OpenJTS and sample rate rows runs against a real Prometheus i
 `tests/test_otlp_e2e.py` and returns data (rates excepted, they need two scrapes). The stack row
 was run against a live usage datasource while building it.
 
+## Series per device
+
+`dashboards/openjts-series-per-device.json` (`OpenJTS / Series per device`) answers "how many
+series does each router produce". It is built by the same script and follows the Active Series
+tab on the Alloy device dashboards (Total Series, Active Series by Metric).
+
+| Section | Panels |
+|---|---|
+| Fleet | Devices reporting, series from routers, average per router, largest router. A table with one row per router and its family, model, site and profiles. A grid of router by profile area, so you can read across to see which profile makes a router expensive and down to see what one more router of that kind costs. |
+| Selected router (`Device` variable) | Total series, interfaces with series, series per interface, series not tied to an interface, router info, series by profile area, series by metric, series by interface (top 50), series over time. |
+
+At the 1 DPM floor one active series is one billable series, so the counts are the metrics bill for
+a router. The per-router rows only count series that carry a `device` label. Collector health series
+are on the cost dashboard. The family, model and site columns come from `junos_device_info`, so a
+router that is not in the targets file shows no row in that table. The e2e test runs every
+query in it against a real Prometheus. The router by profile area grid uses Grafana's
+"Grouping to matrix" transformation, which has not been rendered in a live Grafana yet.
+
 ## Reading the first week
 
 1. **DPM per active series** on the Stack row. Over 1.05 on a stack that only runs OpenJTS means

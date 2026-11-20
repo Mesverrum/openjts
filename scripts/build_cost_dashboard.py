@@ -9,6 +9,10 @@ Three rows:
   OpenJTS series   this stack's Prometheus datasource: active series by metric, device, profile area.
   Sample rate      what leaves the collector (Alloy's exporter counters, Telegraf's own write counters).
 
+Also builds dashboards/openjts-series-per-device.json: series per router (fleet table, router by profile
+area grid) and a Device selector with the breakdown, modelled on the Active Series tab of the Alloy
+device dashboards.
+
   python3 scripts/build_cost_dashboard.py
 """
 from __future__ import annotations
@@ -102,7 +106,7 @@ def bars(title: str, desc: str, expr: str, legend: str, x: int, y: int, w: int, 
                           "valueMode": "color"})
 
 
-def build() -> dict:
+def build_cost() -> dict:
     global _id
     _id = 0
     panels: list[dict] = []
@@ -230,16 +234,115 @@ def build() -> dict:
     return {"uid": "openjts-cost", "title": "OpenJTS / Cost and cardinality", "tags": ["openjts", "junos", "cost"],
             "schemaVersion": 39, "version": 1, "editable": True, "graphTooltip": 2, "refresh": "1m",
             "time": {"from": "now-24h", "to": "now"}, "timezone": "browser",
-            "annotations": {"list": []}, "links": [], "panels": panels, "templating": {"list": templating}}
+            "annotations": {"list": []}, "panels": panels, "templating": {"list": templating},
+            "links": [{"type": "link", "title": "Series per device", "url": "/d/openjts-series-per-device",
+                       "icon": "dashboard", "targetBlank": False}]}
+
+
+def area_of(selector: str) -> str:
+    """junos_interfaces_in_octets_total -> area "interfaces"; junos_device_info -> "device"."""
+    return ('label_replace({%s, __name__=~"junos_.+"}, "area", "$1", "__name__", "junos_([a-z0-9]+)_.+")' % selector)
+
+
+def build_devices() -> dict:
+    """Series per device: the answer to "how many series does each router produce"."""
+    global _id
+    _id = 0
+    panels: list[dict] = []
+    fleet = f'{JOB}, device!=""'
+    sel = f'{JOB}, device=~"$device"'
+    panels.append({"id": nid(), "type": "text", "title": "", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+                   "options": {"mode": "markdown", "content": (
+                       "**How many series does each router produce?** Top half is the fleet, one row per router. "
+                       "Bottom half follows the **Device** selector. At the 1 DPM floor (`min_sample_interval`) one active series is one "
+                       f"billable series ([metrics invoice]({DOCS})), so these counts are the metrics bill for a router. "
+                       "Counts are an instant query (last 5 minutes), a little under the 20 minute window billing uses.")}})
+
+    y = 3
+    panels.append(row("Fleet", y)); y += 1
+    panels.append(stat("Devices reporting", "Distinct device label on junos_device_info.",
+                       [target(f"count(group by (device) (junos_device_info{{{JOB}}}))", instant=True)], 0, y, 6, 4))
+    panels.append(stat("Series from routers", "Series with a device label, job=openjts. Collector health series are not included.",
+                       [target(f"count({{{fleet}}})", instant=True)], 6, y, 6, 4))
+    panels.append(stat("Average series per router", "Series from routers divided by devices reporting.",
+                       [target(f"count({{{fleet}}}) / count(group by (device) (junos_device_info{{{JOB}}}))", instant=True)],
+                       12, y, 6, 4, decimals=0))
+    panels.append(stat("Largest router", "Series on the router with the most. The name is in the table below.",
+                       [target(f"max(count by (device) ({{{fleet}}}))", instant=True)], 18, y, 6, 4))
+    y += 4
+    panels.append(table("Series per router",
+                        "Active series for each router, with the family, model and site from the targets file. "
+                        "Sort by any column.",
+                        f"count by (device) ({{{fleet}}}) * on (device) group_left (family, model, site, profiles) "
+                        f"max by (device, family, model, site, profiles) (junos_device_info{{{JOB}}})",
+                        0, y, 14, 12, ["device", "family", "model", "site", "profiles"]))
+    panels.append(bars("Series per router (chart)", "Same numbers as the table.",
+                       f"sort_desc(count by (device) ({{{fleet}}}))", "{{device}}", 14, y, 10, 12))
+    y += 12
+    matrix = table("Series per router by profile area",
+                   "One row per router, one column per profile area (the second word of the metric name: interfaces, components, "
+                   "network_instance, ...). Read across to see which profile makes a router expensive, down to see what one more "
+                   "router of the same kind costs.",
+                   f"count by (device, area) ({area_of(fleet)})", 0, y, 24, 12, ["device", "area"])
+    matrix["transformations"] = [{"id": "groupingToMatrix", "options": {"columnField": "area", "rowField": "device", "valueField": "Value", "emptyValue": "zero"}}]
+    matrix["options"]["sortBy"] = []
+    panels.append(matrix)
+    y += 12
+
+    panels.append(row("Selected router (Device variable)", y)); y += 1
+    panels.append(stat("Total series", "Active series for the selected routers right now. In Grafana Cloud each unique metric name and label set is one "
+                       "active series, so this is the selected routers' contribution to the stack's active series.",
+                       [target(f"count({{{sel}}})", instant=True)], 0, y, 6, 4))
+    panels.append(stat("Interfaces with series", "Distinct (device, if_name) pairs among the selected routers.",
+                       [target(f'count(group by (device, if_name) ({{{sel}, if_name!=""}}))', instant=True)], 6, y, 6, 4))
+    panels.append(stat("Series per interface", "Interface labelled series divided by interfaces. Multiply by the ports you are about to add.",
+                       [target(f'count({{{sel}, if_name!=""}}) / count(group by (device, if_name) ({{{sel}, if_name!=""}}))', instant=True)],
+                       12, y, 6, 4, decimals=0))
+    panels.append(stat("Series not tied to an interface", "Components, BGP, DDoS and similar. Grows with hardware and peers, not ports.",
+                       [target(f'count({{{sel}}}) - count({{{sel}, if_name!=""}})', instant=True)], 18, y, 6, 4))
+    y += 4
+    panels.append(table("Router info", "From junos_device_info: what the targets file says about the selected routers.",
+                        f"max by (device, family, model, version, site, profiles) (junos_device_info{{{sel}}})",
+                        0, y, 24, 4, ["device", "family", "model", "version", "site", "profiles"]))
+    # No series count in this table, so it should not sort or rename by Series.
+    panels[-1]["options"]["sortBy"] = []
+    panels[-1]["transformations"][0]["options"]["renameByName"] = {}
+    panels[-1]["transformations"][0]["options"]["excludeByName"] = {"Time": True, "Value": True}
+    y += 4
+    panels.append(bars("Series by profile area", "Where the selected routers' series come from. This is the profile you would drop or thin to reduce them.",
+                       f"count by (area) ({area_of(sel)})", "{{area}}", 0, y, 8, 12))
+    panels.append(table("Series by metric",
+                        "Active series per metric for the selected routers: the real breakdown of what drives the footprint. "
+                        "To reduce series, drop a profile from the router in targets/routers.yaml, or a path from the profile.",
+                        f"count by (__name__) ({{{sel}}})", 8, y, 16, 12, ["__name__"]))
+    y += 12
+    panels.append(table("Series by interface (top 50)", "Subinterface units and VOQ queues multiply fastest.",
+                        f'topk(50, count by (device, if_name) ({{{sel}, if_name!=""}}))', 0, y, 12, 10, ["device", "if_name"]))
+    panels.append(ts("Series over time", "A step is a profile or interface change on that router.",
+                     [target(f'count by (device) ({{{sel}}})', "{{device}}")], 12, y, 12, 10))
+
+    templating = [
+        {"name": "datasource", "label": "Data source", "type": "datasource", "query": "prometheus", "current": {},
+         "hide": 0, "refresh": 1, "regex": "", "options": []},
+        {"name": "device", "label": "Device", "type": "query", "datasource": DS,
+         "query": {"query": 'label_values(junos_device_info{job="openjts"}, device)', "refId": "device"},
+         "definition": 'label_values(junos_device_info{job="openjts"}, device)', "refresh": 2, "includeAll": True,
+         "multi": True, "allValue": ".+", "current": {}, "hide": 0, "options": [], "sort": 1},
+    ]
+    return {"uid": "openjts-series-per-device", "title": "OpenJTS / Series per device", "tags": ["openjts", "junos", "cost"],
+            "schemaVersion": 39, "version": 1, "editable": True, "graphTooltip": 2, "refresh": "1m",
+            "time": {"from": "now-24h", "to": "now"}, "timezone": "browser",
+            "annotations": {"list": []}, "panels": panels, "templating": {"list": templating},
+            "links": [{"type": "link", "title": "Cost and cardinality", "url": "/d/openjts-cost", "icon": "dashboard", "targetBlank": False}]}
 
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
-    dash = build()
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(dash, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
-    n = sum(len(p.get("targets") or []) for p in dash["panels"])
-    print(f"{OUT.name:40} {n:3} targets")
+    for path, dash in ((OUT, build_cost()), (OUT.with_name("openjts-series-per-device.json"), build_devices())):
+        path.write_text(json.dumps(dash, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+        n = sum(len(p.get("targets") or []) for p in dash["panels"])
+        print(f"{path.name:40} {n:3} targets")
     return 0
 
 

@@ -5,8 +5,8 @@ Juniper gNMI telemetry into Grafana Cloud, using the profiles and dashboards fro
 
 Upstream OpenJTS runs a full local stack: a custom Telegraf build, jtso (the orchestrator),
 InfluxDB, Kapacitor, Chronograf and Grafana. This fork keeps the part that took real Junos
-knowledge to build, the per-family telemetry profiles and the 15 dashboards (plus a cost and
-cardinality dashboard of its own), and swaps
+knowledge to build, the per-family telemetry profiles and the 15 dashboards (plus a cost dashboard and a
+series-per-router dashboard of its own), and swaps
 everything else for stock components that ship to Grafana Cloud:
 
 ```
@@ -94,7 +94,7 @@ Families: `mx`, `ptx`, `acx`, `qfx`, `ex`, `crpd`, `vmx`, `vjunos`, `vevo`.
 | `scripts/generate.py` | Renders the Telegraf config from `targets/routers.yaml` and the profiles. |
 | `scripts/finalize.star` | Last Telegraf processor. Turns Influx-shaped fields into Prometheus series. |
 | `alloy/config.alloy` | OTLP in, batch, OTLP/HTTP out to Grafana Cloud. |
-| `dashboards/` | The 15 upstream dashboards, converted to PromQL, plus `openjts-cost.json` (active series by source, DPM). Generated, committed. |
+| `dashboards/` | The 15 upstream dashboards, converted to PromQL, plus `openjts-cost.json` (active series by source, DPM) and `openjts-series-per-device.json` (series per router). Generated, committed. |
 | `alerts/openjts.json` | Grafana alert rules from the profiles' probes. Generated, committed. |
 | `docs/` | Architecture, migration notes, metrics catalog, caveats. |
 | `tests/` | Processor chain in real Telegraf, PromQL checks with promtool, OTLP end to end. |

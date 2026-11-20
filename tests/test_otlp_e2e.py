@@ -121,25 +121,31 @@ def main() -> int:
             return 1
         # Every query on the cost dashboard that reads this stack's metrics datasource has to run, and the
         # ones that are not rates have to return something (a rate needs two scrapes, this run has one).
-        cost = json.loads((REPO / "dashboards" / "openjts-cost.json").read_text(encoding="utf-8"))
         bad = []
-        for p in cost["panels"]:
-            for t in p.get("targets") or []:
-                if t["datasource"]["uid"] != "${datasource}":
-                    continue
-                try:
-                    res = prom_get(prom, "/api/v1/query?query=" + urllib.parse.quote(t["expr"]))["data"]["result"]
-                except Exception as e:  # noqa: BLE001
-                    bad.append(f"{p['title']}: {e}")
-                    continue
-                if not res and "rate(" not in t["expr"]:
-                    bad.append(f"{p['title']}: no data for {t['expr']}")
+        for name in ("openjts-cost.json", "openjts-series-per-device.json"):
+            cost = json.loads((REPO / "dashboards" / name).read_text(encoding="utf-8"))
+            for p in cost["panels"]:
+                for t in p.get("targets") or []:
+                    if t["datasource"]["uid"] != "${datasource}":
+                        continue
+                    expr = t["expr"].replace("$device", ".+")  # the variable's All value
+                    try:
+                        res = prom_get(prom, "/api/v1/query?query=" + urllib.parse.quote(expr))["data"]["result"]
+                    except Exception as e:  # noqa: BLE001
+                        bad.append(f"{name}: {p['title']}: {e}")
+                        continue
+                    if not res and "rate(" not in expr:
+                        bad.append(f"{name}: {p['title']}: no data for {expr}")
         if bad:
             print("FAIL cost dashboard queries:")
             for b in bad:
                 print("  " + b)
             return 1
         print("cost dashboard queries OK")
+        fleet = next(t["expr"] for p in json.loads((REPO / "dashboards" / "openjts-series-per-device.json").read_text(encoding="utf-8"))["panels"]
+                     if p["title"] == "Series per router" for t in p["targets"])
+        for r in prom_get(prom, "/api/v1/query?query=" + urllib.parse.quote(fleet))["data"]["result"]:
+            print("  series per router:", json.dumps(r["metric"], sort_keys=True), r["value"][1])
         sample = prom_get(prom, "/api/v1/query?query=junos_interfaces_in_octets_total")["data"]["result"]
         if sample:
             print("labels on junos_interfaces_in_octets_total:", json.dumps(sample[0]["metric"], sort_keys=True))
