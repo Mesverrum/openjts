@@ -1,0 +1,47 @@
+# Copy to targets/routers.yaml (gitignored) and run `make generate`.
+#
+# One entry per router. family + version pick the profile variant the same
+# way jtso did (design_profile/<profile>/definition.json, first match wins).
+# Supported families: mx, ptx, acx, qfx, ex, crpd, vmx, vjunos, vevo
+# (not every profile covers every family; `make generate` prints what it skipped).
+
+# Shows up as service.instance.id on every series. Use one name per collector host.
+collector: openjts-1
+
+defaults:
+  port: 9339               # Junos gNMI port (set system services extension-service request-response grpc)
+  encoding: proto
+  username_env: JUNOS_USERNAME   # names of variables in .env, never the secrets themselves
+  password_env: JUNOS_PASSWORD
+  tls:
+    enable: true
+    ca: certs/ca.pem       # files in ./certs are mounted at /certs in the container
+    # cert: certs/client.pem
+    # key: certs/client.key
+    # server_name: router.example.net
+    # insecure_skip_verify: true   # lab only
+  profiles: [health, traffic, bgp]
+
+routers:
+  - name: edge1-par
+    address: 192.0.2.10
+    family: mx
+    version: "23.4R2"
+    site: par
+    model: MX304
+
+  - name: core1-par
+    address: 192.0.2.20
+    family: ptx
+    version: "24.2R1"
+    site: par
+    model: PTX10003
+    profiles: [health, traffic, optic, ddos, power]
+
+  - name: agg1-lyo
+    address: 192.0.2.30
+    family: acx
+    version: "23.2R1"
+    site: lyo
+    model: ACX7100
+    password_env: JUNOS_PASSWORD_LYO

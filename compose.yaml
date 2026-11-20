@@ -1,0 +1,39 @@
+# Telegraf subscribes to the routers over gNMI and ships OTLP to Alloy, which
+# forwards to Grafana Cloud. Use `make up`: it runs the generator and adds
+# generated/compose.credentials.yaml, which passes the router credential
+# variables named in targets/routers.yaml from .env into Telegraf.
+name: openjts
+
+services:
+  telegraf:
+    image: ${TELEGRAF_IMAGE:-telegraf:1.36}
+    restart: unless-stopped
+    command: ["telegraf", "--config", "/etc/telegraf/telegraf.conf"]
+    environment:
+      OTLP_ENDPOINT: alloy:4317
+    volumes:
+      - ./generated/telegraf:/etc/telegraf:ro
+      - ./certs:/certs:ro
+    depends_on:
+      - alloy
+
+  alloy:
+    image: ${ALLOY_IMAGE:-grafana/alloy:v1.17.1}
+    restart: unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    environment:
+      GC_OTLP_URL: ${GC_OTLP_URL:?set GC_OTLP_URL in .env}
+      GC_OTLP_ACCOUNT: ${GC_OTLP_ACCOUNT:?set GC_OTLP_ACCOUNT in .env}
+      GC_OTLP_KEY: ${GC_OTLP_KEY:?set GC_OTLP_KEY in .env}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+    ports:
+      - "127.0.0.1:12345:12345"
+
+volumes:
+  alloy-data:

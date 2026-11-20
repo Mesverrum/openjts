@@ -1,0 +1,566 @@
+{
+  "title": "openjts",
+  "interval": 60,
+  "rules": [
+    {
+      "uid": "openjts-block-error",
+      "title": "OpenJTS BLOCK_ERROR",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "rate(junos_interfaces_eth_in_block_errors_total[5m])",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 1"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "BLOCK_ERROR",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "PCS block errors on {{ $labels.if_name }} ({{ $labels.device }})",
+        "description": "in_block_errors rate > 1/s. From the monitoring_list probe BLOCK_ERROR in optic/acx_23_optic.json, optic/acx_24_optic.json, optic/acx_optic.json, optic/mx_24_optic.json, optic/mx_optic.json, optic/ptx_23_optic.json, optic/ptx_24_optic.json, optic/ptx_optic.json."
+      }
+    },
+    {
+      "uid": "openjts-cpu-high-mpc",
+      "title": "OpenJTS CPU_HIGH_MPC",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "junos_components_linecard_cpu",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 80"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "CPU_HIGH_MPC",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Linecard CPU high on {{ $labels.component_name }} ({{ $labels.device }})",
+        "description": "linecard_cpu > 80. From the monitoring_list probe CPU_HIGH_MPC in health/acx_23_health.json, health/acx_health.json, health/ex_health.json, health/mx_health.json, health/ptx_health.json, health/qfx_health.json, health/vevo_health.json, health/vjunos_health.json, health/vmx_health.json."
+      }
+    },
+    {
+      "uid": "openjts-cpu-high-re",
+      "title": "OpenJTS CPU_HIGH_RE",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "junos_components_idle_cpu",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B < 10"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "CPU_HIGH_RE",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Routing Engine CPU high on {{ $labels.component_name }} ({{ $labels.device }})",
+        "description": "idle_cpu < 10. From the monitoring_list probe CPU_HIGH_RE in health/acx_23_health.json, health/acx_health.json, health/ex_health.json, health/mx_health.json, health/ptx_health.json, health/qfx_health.json, health/vevo_health.json, health/vjunos_health.json, health/vmx_health.json."
+      }
+    },
+    {
+      "uid": "openjts-crc-error",
+      "title": "OpenJTS CRC_ERROR",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "rate(junos_interfaces_eth_in_crc_errors_total[5m])",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 1"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "CRC_ERROR",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "CRC errors on {{ $labels.if_name }} ({{ $labels.device }})",
+        "description": "in_crc_errors rate > 1/s. From the monitoring_list probe CRC_ERROR in optic/acx_23_optic.json, optic/acx_24_optic.json, optic/acx_optic.json, optic/mx_24_optic.json, optic/mx_optic.json, optic/ptx_23_optic.json, optic/ptx_24_optic.json, optic/ptx_optic.json."
+      }
+    },
+    {
+      "uid": "openjts-eth-drop-in",
+      "title": "OpenJTS ETH_DROP_IN",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "rate(junos_interfaces_in_errors_total[5m]) or rate(junos_qmon_in_errors_total[5m]) or rate(junos_subinterfaces_in_errors_total[5m])",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 1"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "ETH_DROP_IN",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Input errors on {{ $labels.if_name }} ({{ $labels.device }})",
+        "description": "in_errors rate > 1/s. From the monitoring_list probe ETH_DROP_IN in traffic/acx_traffic.json, traffic/ex_traffic.json, traffic/mx_traffic.json, traffic/ptx_22_traffic.json, traffic/ptx_traffic.json, traffic/qfx_traffic.json, traffic/vmx_traffic.json."
+      }
+    },
+    {
+      "uid": "openjts-eth-drop-out",
+      "title": "OpenJTS ETH_DROP_OUT",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "rate(junos_interfaces_out_errors_total[5m]) or rate(junos_qmon_out_errors_total[5m]) or rate(junos_subinterfaces_out_errors_total[5m])",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 1"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "ETH_DROP_OUT",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Output errors on {{ $labels.if_name }} ({{ $labels.device }})",
+        "description": "out_errors rate > 1/s. From the monitoring_list probe ETH_DROP_OUT in traffic/acx_traffic.json, traffic/ex_traffic.json, traffic/mx_traffic.json, traffic/ptx_22_traffic.json, traffic/ptx_traffic.json, traffic/qfx_traffic.json, traffic/vmx_traffic.json."
+      }
+    },
+    {
+      "uid": "openjts-mem-high-mpc",
+      "title": "OpenJTS MEM_HIGH_MPC",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "junos_components_linecard_memory",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 80"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "MEM_HIGH_MPC",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Linecard memory high on {{ $labels.component_name }} ({{ $labels.device }})",
+        "description": "linecard_memory > 80. From the monitoring_list probe MEM_HIGH_MPC in health/acx_23_health.json, health/acx_health.json, health/ex_health.json, health/mx_health.json, health/ptx_health.json, health/qfx_health.json, health/vevo_health.json, health/vjunos_health.json, health/vmx_health.json."
+      }
+    },
+    {
+      "uid": "openjts-mem-high-re",
+      "title": "OpenJTS MEM_HIGH_RE",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "junos_components_buffer_usage",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 80"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "MEM_HIGH_RE",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Routing Engine memory high on {{ $labels.component_name }} ({{ $labels.device }})",
+        "description": "buffer_usage > 80. From the monitoring_list probe MEM_HIGH_RE in health/acx_23_health.json, health/acx_health.json, health/ex_health.json, health/mx_health.json, health/ptx_health.json, health/qfx_health.json, health/vevo_health.json, health/vjunos_health.json, health/vmx_health.json."
+      }
+    },
+    {
+      "uid": "openjts-red-drop",
+      "title": "OpenJTS RED_DROP",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "rate(junos_interfaces_cos_red_dropped_packets_total[5m]) or rate(junos_qmon_cos_red_dropped_packets_total[5m]) or rate(junos_subinterfaces_cos_red_dropped_packets_total[5m])",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 1"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "RED_DROP",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "WRED drops on {{ $labels.if_name }} queue {{ $labels.queue_id }} ({{ $labels.device }})",
+        "description": "cos_red_dropped_packets rate > 1/s. From the monitoring_list probe RED_DROP in traffic/acx_traffic.json, traffic/ex_traffic.json, traffic/mx_traffic.json, traffic/ptx_22_traffic.json, traffic/ptx_traffic.json, traffic/qfx_traffic.json, traffic/vmx_traffic.json."
+      }
+    },
+    {
+      "uid": "openjts-tail-drop",
+      "title": "OpenJTS TAIL_DROP",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "grafanacloud-prom",
+          "model": {
+            "refId": "A",
+            "expr": "rate(junos_interfaces_cos_tail_dropped_packets_total[5m]) or rate(junos_qmon_cos_tail_dropped_packets_total[5m]) or rate(junos_subinterfaces_cos_tail_dropped_packets_total[5m])",
+            "instant": true,
+            "range": false,
+            "editorMode": "code"
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last",
+            "settings": {
+              "mode": "dropNN"
+            }
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "math",
+            "expression": "$B > 1"
+          }
+        }
+      ],
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "for": "5m",
+      "labels": {
+        "source": "openjts",
+        "probe": "TAIL_DROP",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Tail drops on {{ $labels.if_name }} queue {{ $labels.queue_id }} ({{ $labels.device }})",
+        "description": "cos_tail_dropped_packets rate > 1/s. From the monitoring_list probe TAIL_DROP in traffic/acx_traffic.json, traffic/ex_traffic.json, traffic/mx_traffic.json, traffic/ptx_22_traffic.json, traffic/ptx_traffic.json, traffic/qfx_traffic.json, traffic/vmx_traffic.json."
+      }
+    }
+  ]
+}
